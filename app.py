@@ -3,7 +3,6 @@ import os
 import json
 
 FICHIER = "depenses_hiba.json"
-FOND_DEPART = 69000  # <-- ton nouveau fond
 
 def charger():
     if os.path.exists(FICHIER):
@@ -11,18 +10,17 @@ def charger():
             with open(FICHIER, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 if isinstance(data, list): # ancien format
-                    return {"fond": FOND_DEPART, "depenses": data}
-                # Si ancien fond 86500, on le met à 69000
-                if data.get("fond") == 86500:
-                    data["fond"] = FOND_DEPART
-                return data
+                    return data
+                if isinstance(data, dict) and "depenses" in data:
+                    return data["depenses"]
+                return []
         except:
-            pass
-    return {"fond": FOND_DEPART, "depenses": []}
+            return []
+    return []
 
-def sauvegarder(fond, depenses):
+def sauvegarder(depenses):
     with open(FICHIER, "w", encoding="utf-8") as f:
-        json.dump({"fond": fond, "depenses": depenses}, f, ensure_ascii=False)
+        json.dump(depenses, f, ensure_ascii=False)
 
 def main(page: ft.Page):
     page.title = "HIBA - Budget Famille"
@@ -30,35 +28,27 @@ def main(page: ft.Page):
     page.padding = 20
     page.scroll = ft.ScrollMode.AUTO
 
-    data = charger()
-    fond = data["fond"]
-    depenses = data["depenses"]
+    depenses = charger()
 
-    txt_fond = ft.Text(size=17, weight="bold")
-    txt_total_dep = ft.Text(size=17)
-    txt_total_ajout = ft.Text(size=17, color=ft.Colors.GREEN_300)
-    txt_reste = ft.Text(size=22, weight="bold")
+    txt_hiba = ft.Text(size=28, weight="bold", color=ft.Colors.PINK_300)
+    txt_resume = ft.Text(size=16, color=ft.Colors.GREY_400)
 
-    # Champs depense
     champ_quoi = ft.TextField(label="Quoi ? (ex: riz, transport)", width=350)
     champ_montant = ft.TextField(label="Montant depense", width=350, keyboard_type=ft.KeyboardType.NUMBER)
     
-    # Champs ajout argent
-    champ_source = ft.TextField(label="Source argent (ex: salaire)", width=350)
+    champ_source = ft.TextField(label="Source argent (ex: 69000 depart, salaire)", width=350)
     champ_ajout = ft.TextField(label="Montant a ajouter", width=350, keyboard_type=ft.KeyboardType.NUMBER)
 
     col_historique = ft.Column()
 
     def mettre_a_jour():
-        total_dep = sum(d["montant"] for d in depenses if d["type"]=="depense")
-        total_ajout = sum(d["montant"] for d in depenses if d["type"]=="ajout")
-        reste = fond + total_ajout - total_dep
+        total_dep = sum(d["montant"] for d in depenses if d.get("type","depense")=="depense")
+        total_ajout = sum(d["montant"] for d in depenses if d.get("type")=="ajout")
+        hiba = total_ajout - total_dep
 
-        txt_fond.value = f"Fond de depart: {fond} FCFA"
-        txt_total_dep.value = f"Total depenses: {total_dep} FCFA"
-        txt_total_ajout.value = f"Total argent ajoute: +{total_ajout} FCFA"
-        txt_reste.value = f"Reste: {reste} FCFA"
-        txt_reste.color = ft.Colors.GREEN if reste >= 20000 else ft.Colors.ORANGE if reste >=0 else ft.Colors.RED
+        txt_hiba.value = f"HIBA: {hiba} FCFA"
+        txt_hiba.color = ft.Colors.GREEN_300 if hiba >= 20000 else ft.Colors.ORANGE if hiba >=0 else ft.Colors.RED_300
+        txt_resume.value = f"Entrees: +{total_ajout} | Depenses: -{total_dep}"
         
         col_historique.controls.clear()
         for idx, d in enumerate(reversed(depenses)):
@@ -66,11 +56,11 @@ def main(page: ft.Page):
             def make_delete(i=vrai_idx):
                 def delete(e):
                     depenses.pop(i)
-                    sauvegarder(fond, depenses)
+                    sauvegarder(depenses)
                     mettre_a_jour()
                 return delete
             
-            is_ajout = d["type"]=="ajout"
+            is_ajout = d.get("type")=="ajout"
             prefix = "🟢 + " if is_ajout else "🔴 - "
             couleur = ft.Colors.GREEN_300 if is_ajout else ft.Colors.WHITE
             ligne = ft.Row([
@@ -85,7 +75,7 @@ def main(page: ft.Page):
         try: montant = int(champ_montant.value)
         except: return
         depenses.append({"quoi": champ_quoi.value.strip(), "montant": montant, "type": "depense"})
-        sauvegarder(fond, depenses)
+        sauvegarder(depenses)
         champ_quoi.value = ""; champ_montant.value = ""
         mettre_a_jour()
 
@@ -94,16 +84,14 @@ def main(page: ft.Page):
         try: montant = int(champ_ajout.value)
         except: return
         depenses.append({"quoi": champ_source.value.strip(), "montant": montant, "type": "ajout"})
-        sauvegarder(fond, depenses)
+        sauvegarder(depenses)
         champ_source.value = ""; champ_ajout.value = ""
         mettre_a_jour()
 
     page.add(
         ft.Text("HIBA - Budget Famille", size=26, color=ft.Colors.RED_400, weight="bold"),
-        txt_fond,
-        txt_total_dep,
-        txt_total_ajout,
-        txt_reste,
+        txt_hiba,
+        txt_resume,
         ft.Divider(),
         ft.Text("1. Depense", weight="bold", color=ft.Colors.RED_200),
         champ_quoi, champ_montant,
@@ -113,7 +101,7 @@ def main(page: ft.Page):
         champ_source, champ_ajout,
         ft.ElevatedButton("Ajouter +", bgcolor=ft.Colors.GREEN_400, color="white", on_click=ajouter_argent),
         ft.Divider(),
-        ft.Text("Historique (vert=ajout, blanc=depense):", weight="bold"),
+        ft.Text("Historique:", weight="bold"),
         col_historique
     )
     mettre_a_jour()
