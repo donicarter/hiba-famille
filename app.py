@@ -19,37 +19,46 @@ def save():
 
 def main(page: ft.Page):
     page.title = "HIBA - Budget Famille"
-    page.bgcolor = "#FFF0F5"
-    page.padding = 15
     page.scroll = "auto"
-
-    total = sum(x["montant"] for x in depenses)
-    reste = fond - total
+    page.padding = 20
 
     titre = ft.Text("HIBA - Budget Famille", size=24, weight="bold", color="#E91E63")
-    txt_fond = ft.Text(f"FOND DISPO {fond} FCFA", size=18, weight="bold")
-    txt_total = ft.Text(f"Depense: {total} FCFA")
-    txt_reste = ft.Container(ft.Text(f"RESTE: {reste} FCFA", size=20, weight="bold", color="blue"), bgcolor="white", padding=15, border_radius=10)
+    txt_fond = ft.Text(f"Fond de depart: {fond} FCFA", size=16)
+    total_dep = sum([x["montant"] for x in depenses])
+    txt_total = ft.Text(f"Total depenses: {total_dep} FCFA", size=16)
+    txt_reste = ft.Text(f"Reste: {fond - total_dep} FCFA", size=18, weight="bold", color="green")
 
-    label_input = ft.TextField(label="Pour quoi ?", hint_text="ex: marche")
-    montant_input = ft.TextField(label="Montant", keyboard_type=ft.KeyboardType.NUMBER)
+    label_input = ft.TextField(label="Quoi ? (ex: riz)", width=300)
+    montant_input = ft.TextField(label="Montant FCFA", width=300, keyboard_type="number")
+    
+    liste = ft.Column()
 
-    liste = ft.Column([ft.Text(f"{x['label']}: {x['montant']} FCFA") for x in depenses])
+    def refresh_list():
+        liste.controls.clear()
+        for item in reversed(depenses):
+            liste.controls.append(ft.Text(f"- {item['label']}: {item['montant']} FCFA"))
+        total = sum([x["montant"] for x in depenses])
+        txt_total.value = f"Total depenses: {total} FCFA"
+        txt_reste.value = f"Reste: {fond - total} FCFA"
+        page.update()
 
     def ajouter(e):
-        global fond
-        if montant_input.value and label_input.value:
-            try:
-                m = int(montant_input.value)
-                depenses.append({"label": label_input.value, "montant": m})
+        try:
+            m = int(montant_input.value)
+            l = label_input.value
+            if l and m:
+                depenses.append({"label": l, "montant": m})
                 save()
+                refresh_list()
                 page.snack_bar = ft.SnackBar(ft.Text(f"Ajoute {m} FCFA"))
                 page.snack_bar.open = True
                 montant_input.value = ""
                 label_input.value = ""
                 page.update()
-            except:
-                pass
+        except:
+            pass
+
+    refresh_list()
 
     page.add(ft.Column([
         titre, txt_fond, txt_total, txt_reste,
@@ -60,6 +69,5 @@ def main(page: ft.Page):
         ft.Text("Historique:", weight="bold"),
         liste
     ]))
-
-    port = int(os.environ.get("PORT", 8550))
-    ft.app(target=main, view=ft.WEB_BROWSER, port=port)
+port = int(os.environ.get("PORT", 8550))
+ft.app(target=main, view=ft.WEB_BROWSER, port=port)
