@@ -1,6 +1,7 @@
 import flet as ft
 import os
 import json
+from datetime import datetime
 
 FICHIER = "depenses_hiba.json"
 
@@ -9,7 +10,7 @@ def charger():
         try:
             with open(FICHIER, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                if isinstance(data, list): # ancien format
+                if isinstance(data, list):
                     return data
                 if isinstance(data, dict) and "depenses" in data:
                     return data["depenses"]
@@ -36,7 +37,7 @@ def main(page: ft.Page):
     champ_quoi = ft.TextField(label="Quoi ? (ex: riz, transport)", width=350)
     champ_montant = ft.TextField(label="Montant depense", width=350, keyboard_type=ft.KeyboardType.NUMBER)
     
-    champ_source = ft.TextField(label="Source argent (ex: 69000 depart, salaire)", width=350)
+    champ_source = ft.TextField(label="Source argent (ex: salaire)", width=350)
     champ_ajout = ft.TextField(label="Montant a ajouter", width=350, keyboard_type=ft.KeyboardType.NUMBER)
 
     col_historique = ft.Column()
@@ -63,8 +64,13 @@ def main(page: ft.Page):
             is_ajout = d.get("type")=="ajout"
             prefix = "🟢 + " if is_ajout else "🔴 - "
             couleur = ft.Colors.GREEN_300 if is_ajout else ft.Colors.WHITE
+            date_str = d.get("date", "")
+            
             ligne = ft.Row([
-                ft.Text(f"{prefix}{d['quoi']}: {d['montant']} FCFA", expand=True, color=couleur),
+                ft.Column([
+                    ft.Text(f"{prefix}{d['quoi']}: {d['montant']} FCFA", color=couleur, size=15),
+                    ft.Text(f"  {date_str}", color=ft.Colors.GREY_500, size=11) if date_str else ft.Text("")
+                ], expand=True, spacing=2),
                 ft.IconButton(icon=ft.Icons.DELETE, icon_color=ft.Colors.RED_300, on_click=make_delete())
             ])
             col_historique.controls.append(ligne)
@@ -74,7 +80,8 @@ def main(page: ft.Page):
         if not champ_quoi.value or not champ_montant.value: return
         try: montant = int(champ_montant.value)
         except: return
-        depenses.append({"quoi": champ_quoi.value.strip(), "montant": montant, "type": "depense"})
+        date_now = datetime.now().strftime("%d/%m %H:%M")
+        depenses.append({"quoi": champ_quoi.value.strip(), "montant": montant, "type": "depense", "date": date_now})
         sauvegarder(depenses)
         champ_quoi.value = ""; champ_montant.value = ""
         mettre_a_jour()
@@ -83,7 +90,8 @@ def main(page: ft.Page):
         if not champ_source.value or not champ_ajout.value: return
         try: montant = int(champ_ajout.value)
         except: return
-        depenses.append({"quoi": champ_source.value.strip(), "montant": montant, "type": "ajout"})
+        date_now = datetime.now().strftime("%d/%m %H:%M")
+        depenses.append({"quoi": champ_source.value.strip(), "montant": montant, "type": "ajout", "date": date_now})
         sauvegarder(depenses)
         champ_source.value = ""; champ_ajout.value = ""
         mettre_a_jour()
@@ -101,7 +109,7 @@ def main(page: ft.Page):
         champ_source, champ_ajout,
         ft.ElevatedButton("Ajouter +", bgcolor=ft.Colors.GREEN_400, color="white", on_click=ajouter_argent),
         ft.Divider(),
-        ft.Text("Historique:", weight="bold"),
+        ft.Text("Historique avec dates:", weight="bold"),
         col_historique
     )
     mettre_a_jour()
