@@ -70,4 +70,10 @@ def main(page: ft.Page):
         liste
     ]))
 port = int(os.environ.get("PORT", 8550))
-ft.app(target=main, view=ft.WEB_BROWSER, port=port)
+try:
+    ft.app(target=main, view=ft.WEB_BROWSER, port=port)
+except:
+    try:
+        ft.app(target=main, view=ft.AppView.WEB_BROWSER, port=port)
+    except:
+        ft.app(target=main, port=port)
