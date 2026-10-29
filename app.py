@@ -3,11 +3,10 @@ import os, json, hashlib
 from datetime import datetime
 
 FICHIER="depenses_hiba.json"
-PIN_HASH = "1504" # PIN = password (à changer)
+PIN_SECRET = "1234"  # <-- METS TON CODE ICI
 
 def check_pin(pin):
-    return hashlib.md5(pin.encode()).hexdigest() == PIN_HASH
-
+    return pin == PIN_SECRET
 def charger():
     if os.path.exists(FICHIER):
         try:
