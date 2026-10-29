@@ -3,7 +3,7 @@ import os, json, hashlib
 from datetime import datetime
 
 FICHIER="depenses_hiba.json"
-PIN_HASH = "5f4dcc3b5aa765d61d8327deb882cf99" # PIN = password (à changer)
+PIN_HASH = "1504" # PIN = password (à changer)
 
 def check_pin(pin):
     return hashlib.md5(pin.encode()).hexdigest() == PIN_HASH
